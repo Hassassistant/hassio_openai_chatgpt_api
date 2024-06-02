@@ -1,14 +1,13 @@
-import openai
+from openai import OpenAI
 import voluptuous as vol
 from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import CONF_API_KEY, CONF_NAME
 import homeassistant.helpers.config_validation as cv
 from homeassistant.core import callback
 
-
 CONF_MODEL = "model"
 DEFAULT_NAME = "hassio_openai_response"
-DEFAULT_MODEL = "text-davinci-003"
+DEFAULT_MODEL = "GPT-4o"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -23,28 +22,28 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     name = config[CONF_NAME]
     model = config[CONF_MODEL]
 
-    openai.api_key = api_key
+    client = OpenAI(api_key=api_key)  # Instantiate the OpenAI client
 
-    async_add_entities([OpenAIResponseSensor(hass, name, model)], True)
+    async_add_entities([OpenAIResponseSensor(hass, name, model, client)], True)
 
-
-def generate_openai_response_sync(model, prompt, temperature, max_tokens, top_p, frequency_penalty, presence_penalty):
-    return openai.Completion.create(
+def generate_openai_response_sync(client, model, prompt, temperature, max_tokens, top_p, frequency_penalty, presence_penalty):
+    response = client.completions.create(
         model=model,
         prompt=prompt,
         temperature=temperature,
         max_tokens=max_tokens,
         top_p=top_p,
         frequency_penalty=frequency_penalty,
-        presence_penalty=presence_penalty
+        presence_penalty=presence_penalty,
     )
-
+    return response
 
 class OpenAIResponseSensor(SensorEntity):
-    def __init__(self, hass, name, model):
+    def __init__(self, hass, name, model, client):
         self._hass = hass
         self._name = name
         self._model = model
+        self._client = client
         self._state = None
         self._response_text = ""
 
@@ -65,6 +64,7 @@ class OpenAIResponseSensor(SensorEntity):
         if new_text:
             response = await self._hass.async_add_executor_job(
                 generate_openai_response_sync,
+                self._client,
                 self._model,
                 new_text,
                 0.9,
@@ -73,7 +73,7 @@ class OpenAIResponseSensor(SensorEntity):
                 0,
                 0
             )
-            self._response_text = response["choices"][0]["text"]
+            self._response_text = response.choices[0].text
             self._state = "response_received"
             self.async_write_ha_state()
 

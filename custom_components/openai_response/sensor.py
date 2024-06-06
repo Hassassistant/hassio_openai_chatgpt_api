@@ -26,15 +26,10 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
     async_add_entities([OpenAIResponseSensor(hass, name, model, client)], True)
 
-def generate_openai_response_sync(client, model, prompt, temperature, max_tokens, top_p, frequency_penalty, presence_penalty):
-    response = client.completions.create(
+def generate_openai_chat_response_sync(client, model, messages):
+    response = client.chat.completions.create(
         model=model,
-        prompt=prompt,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        top_p=top_p,
-        frequency_penalty=frequency_penalty,
-        presence_penalty=presence_penalty,
+        messages=messages
     )
     return response
 
@@ -63,17 +58,12 @@ class OpenAIResponseSensor(SensorEntity):
         new_text = new_state.state
         if new_text:
             response = await self._hass.async_add_executor_job(
-                generate_openai_response_sync,
+                generate_openai_chat_response_sync,
                 self._client,
                 self._model,
-                new_text,
-                0.9,
-                964,
-                1,
-                0,
-                0
+                [{"role": "user", "content": new_text}]
             )
-            self._response_text = response.choices[0].text
+            self._response_text = response.choices[0].message.content
             self._state = "response_received"
             self.async_write_ha_state()
 

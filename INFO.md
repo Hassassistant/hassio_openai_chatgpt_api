@@ -1,4 +1,4 @@
-<img src="https://github.com/Hassassistant/openai_response/blob/main/misc/ChatGPT_image.PNG?raw=true"
+<img src="https://raw.githubusercontent.com/Hassassistant/openai_response/main/miscChatGPT_image.PNG"
      width="20%"
      align="right"
      style="float: right; margin: 10px 0px 20px 20px;" />
